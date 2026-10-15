@@ -660,13 +660,19 @@ class TestAddFileToGraph:
 
         gb.add_file_to_graph(file_data, "my_repo", {}, repo_path_str="/repo")
 
+        # Module nodes are written by a node-only query before the IMPORTS relationships
+        module_call = next(
+            c
+            for c in session.calls
+            if "MERGE (m:Module {name: row.name})" in c["query"] and "IMPORTS" not in c["query"]
+        )
+        assert "m.lang = coalesce(m.lang, row.lang)" in module_call["query"]
+        assert "m.full_import_name = coalesce(m.full_import_name, row.full_import_name)" in module_call["query"]
         import_call = next(
             c
             for c in session.calls
             if "MERGE (f)-[r:IMPORTS {line_number: row.line_number" in c["query"]
         )
-        assert "m.lang = coalesce(m.lang, row.lang)" in import_call["query"]
-        assert "m.full_import_name = coalesce(m.full_import_name, row.full_import_name)" in import_call["query"]
         assert "r.full_import_name = row.full_import_name" in import_call["query"]
         assert "r.lang = row.lang" in import_call["query"]
 
@@ -1321,6 +1327,19 @@ class TestWatcherIncrementalHandleModification:
             watcher._handle_modification("/fake/module.py")
 
         mock_gb.link_function_calls.assert_called_once()
+
+    def test_incremental_parse_workers_delegates_to_shared_helper(self):
+        """Worker-count rules live in get_parallel_workers(); the watcher only picks its default (#1732)."""
+        from codegraphcontext.core.watcher import RepositoryEventHandler
+        from codegraphcontext.tools.indexing.pipeline import WATCHER_DEFAULT_PARALLEL_WORKERS
+
+        watcher = RepositoryEventHandler.__new__(RepositoryEventHandler)
+        with patch(
+            "codegraphcontext.tools.indexing.pipeline.get_parallel_workers",
+            return_value=6,
+        ) as helper:
+            assert watcher._incremental_parse_workers() == 6
+        helper.assert_called_once_with(default=WATCHER_DEFAULT_PARALLEL_WORKERS)
 
 
 class TestWriteOrmMappingsDatasourceName:
