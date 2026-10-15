@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 
+from .debug_log import warning_logger
+
 _FORBIDDEN_KEYWORDS = (
     "CREATE",
     "MERGE",
@@ -148,14 +150,18 @@ def is_read_only_cypher(query: str) -> bool:
         return False
     stripped = _strip_literals_and_comments(query)
     if ";" in stripped:
+        warning_logger("Cypher query rejected: statement separator is not allowed.")
         return False
     for keyword in _FORBIDDEN_KEYWORDS:
         if _keyword_in_clause_position(stripped, keyword):
+            warning_logger(f"Cypher query rejected: forbidden keyword '{keyword}'.")
             return False
     for pattern in _FORBIDDEN_PATTERNS:
         if pattern.search(stripped):
+            warning_logger("Cypher query rejected: write-side procedure namespace.")
             return False
     if not _calls_allowed(stripped):
+        warning_logger("Cypher query rejected: CALL is not on the read-only allowlist.")
         return False
     return True
 
