@@ -363,10 +363,11 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
     openai_key = os.getenv("OPENAI_API_KEY")
     atlascloud_key = os.getenv("ATLASCLOUD_API_KEY") or os.getenv("ATLAS_CLOUD_API_KEY")
     cheaperinference_key = os.getenv("CHEAPER_INFERENCE_API_KEY")
+    api_route_key = os.getenv("API_ROUTE_API_KEY")
     
-    if not gemini_key and not openai_key and not atlascloud_key and not cheaperinference_key:
+    if not gemini_key and not openai_key and not atlascloud_key and not cheaperinference_key and not api_route_key:
         raise ValueError(
-            "GEMINI_API_KEY, OPENAI_API_KEY, ATLASCLOUD_API_KEY, or CHEAPER_INFERENCE_API_KEY "
+            "GEMINI_API_KEY, OPENAI_API_KEY, ATLASCLOUD_API_KEY, CHEAPER_INFERENCE_API_KEY, or API_ROUTE_API_KEY "
             "environment variable is required."
         )
     
@@ -402,13 +403,20 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
             url = f"{base_url}/chat/completions"
             model = os.getenv("ATLASCLOUD_MODEL") or os.getenv("ATLAS_CLOUD_MODEL")
             model = model or "deepseek-ai/deepseek-v4-pro"
-        else:
+        elif cheaperinference_key:
             provider_name = "Cheaper Inference"
             api_key = cheaperinference_key
             base_url = os.getenv("CHEAPER_INFERENCE_API_BASE")
             base_url = (base_url or "https://api.cheaperinference.com/v1").rstrip("/")
             url = f"{base_url}/chat/completions"
             model = os.getenv("CHEAPER_INFERENCE_MODEL") or "gpt-5.4-mini"
+        else:
+            provider_name = "API Route"
+            api_key = api_route_key
+            base_url = os.getenv("API_ROUTE_API_BASE")
+            base_url = (base_url or "https://global.api-route.com/v1").rstrip("/")
+            url = f"{base_url}/chat/completions"
+            model = os.getenv("API_ROUTE_MODEL") or "gpt-6.1-sol"
 
         headers = {
             "Content-Type": "application/json",
@@ -585,13 +593,14 @@ async def ai_query(request: AIQueryRequest):
     openai_key = os.getenv("OPENAI_API_KEY")
     atlascloud_key = os.getenv("ATLASCLOUD_API_KEY") or os.getenv("ATLAS_CLOUD_API_KEY")
     cheaperinference_key = os.getenv("CHEAPER_INFERENCE_API_KEY")
+    api_route_key = os.getenv("API_ROUTE_API_KEY")
     
-    if not gemini_key and not openai_key and not atlascloud_key and not cheaperinference_key:
+    if not gemini_key and not openai_key and not atlascloud_key and not cheaperinference_key and not api_route_key:
         raise HTTPException(
             status_code=400,
             detail=(
                 "AI querying requires GEMINI_API_KEY, OPENAI_API_KEY, ATLASCLOUD_API_KEY, "
-                "or CHEAPER_INFERENCE_API_KEY. "
+                "CHEAPER_INFERENCE_API_KEY, or API_ROUTE_API_KEY. "
                 "Please set one in your configuration or .env."
             )
         )
