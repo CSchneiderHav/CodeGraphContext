@@ -33,6 +33,14 @@ ignored by default (some projects keep real scripts there) — add it to your
 
 ## Databases
 
+### MyBatis operations are parsed but READS/WRITES edges are missing
+Re-index the repository with `cgc index . --force` after upgrading. XML mapper
+namespaces now resolve to unique Java declarations in the indexed repository,
+and the writer matches each method by its source path rather than relying on
+`class_context`. Related ORM table writes use the schema's `fqn` primary key.
+Unknown or ambiguous namespaces are skipped with a warning; index an individual
+module if several modules declare the same fully qualified mapper name.
+
 ### "Could not set lock on file" when running CLI commands
 Another CGC process (a Gateway, an MCP server, a watcher) already has the
 embedded database open — KùzuDB/LadybugDB are single-process. Use the
