@@ -37,5 +37,5 @@ def test_server_is_bound_to_the_serving_event_loop(fake_server):
 
 
 def test_sse_list_tools_still_gets_a_server(fake_server):
-    tools = asyncio.run(mcp_sse.handle_list_tools())
+    tools = asyncio.run(mcp_sse.handle_list_tools(None, None)).tools
     assert [t.name for t in tools] == ["t"]
