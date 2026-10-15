@@ -701,11 +701,13 @@ class CodeFinder:
     
     def who_calls_function(self, function_name: str, path: Optional[str] = None, repo_path: Optional[str] = None, limit: Optional[int] = None) -> List[Dict]:
         """Find callers of a function or class constructor using CALLS relationships with improved matching"""
+        if path:
+            path = Path(path).as_posix()
         repo_path = self._normalize_repo_path_filter(repo_path)
         # Indexed symbols live below the repository directory. A separator
         # prevents a /repo filter from including its sibling /repo-other.
         if repo_path:
-            repo_path = repo_path.rstrip("/") + "/"
+            repo_path = Path(repo_path).as_posix().rstrip("/") + "/"
         with self.driver.session() as session:
             repo_filter = "AND caller.path STARTS WITH $repo_path" if repo_path else ""
             limit_clause = "LIMIT $limit" if limit is not None else ""
@@ -775,7 +777,7 @@ class CodeFinder:
         # Indexed symbols live below the repository directory. A separator
         # prevents a /repo filter from including its sibling /repo-other.
         if repo_path:
-            repo_path = repo_path.rstrip("/") + "/"
+            repo_path = Path(repo_path).as_posix().rstrip("/") + "/"
         with self.driver.session() as session:
             limit_clause = "LIMIT $limit" if limit is not None else ""
             params = {"function_name": function_name, "repo_path": repo_path}
@@ -783,7 +785,7 @@ class CodeFinder:
                 params["limit"] = limit
             if path:
                 # Convert path to absolute path
-                absolute_file_path = str(Path(path).resolve())
+                absolute_file_path = Path(path).resolve().as_posix()
                 params["absolute_file_path"] = absolute_file_path
                 result = session.run(f"""
                     MATCH (caller:Function {{name: $function_name, path: $absolute_file_path}})
@@ -1199,9 +1201,11 @@ class CodeFinder:
 
     def find_all_callers(self, function_name: str, path: Optional[str] = None, repo_path: Optional[str] = None, depth: int = 3) -> List[Dict]:
         """Find direct/indirect callers of a function or class constructor."""
+        if path:
+            path = Path(path).as_posix()
         repo_path = self._normalize_repo_path_filter(repo_path)
         if repo_path:
-            repo_path = repo_path.rstrip("/") + "/"
+            repo_path = Path(repo_path).as_posix().rstrip("/") + "/"
         depth = _sanitize_depth(depth)
         repo_filter = "AND caller.path STARTS WITH $repo_path" if repo_path else ""
         path_filter = "AND target.path = $path" if path else ""
@@ -1217,9 +1221,11 @@ class CodeFinder:
 
     def find_all_callees(self, function_name: str, path: Optional[str] = None, repo_path: Optional[str] = None, depth: int = 3) -> List[Dict]:
         """Find direct/indirect function and class-constructor callees."""
+        if path:
+            path = Path(path).as_posix()
         repo_path = self._normalize_repo_path_filter(repo_path)
         if repo_path:
-            repo_path = repo_path.rstrip("/") + "/"
+            repo_path = Path(repo_path).as_posix().rstrip("/") + "/"
         depth = _sanitize_depth(depth)
         repo_filter = "AND callee.path STARTS WITH $repo_path" if repo_path else ""
         path_filter = "AND caller.path = $path" if path else ""
