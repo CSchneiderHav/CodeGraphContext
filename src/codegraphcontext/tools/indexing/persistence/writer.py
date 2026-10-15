@@ -11,7 +11,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ....utils.debug_log import info_logger, warning_logger
 from ....utils.git_utils import get_repo_commit_hash
-from ..sanitize import sanitize_props, sanitize_props_with_secrets
+from ..sanitize import sanitize_props as sanitize_props
+from ..sanitize import sanitize_props_with_secrets
 from ..schema_contract import NODE_LABELS
 from .utils import get_backend_type, execute_write_operation, execute_read_operation
 
