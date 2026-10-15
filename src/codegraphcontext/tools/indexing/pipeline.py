@@ -439,7 +439,7 @@ async def run_tree_sitter_index_async(
             job_manager.update_job(job_id, status_message="Processing MyBatis XML mappers...")
         try:
             from ...tools.languages.mybatis import find_and_parse_mybatis_mappers
-            mybatis_batch = await asyncio.to_thread(find_and_parse_mybatis_mappers, path.resolve())
+            mybatis_batch = await asyncio.to_thread(find_and_parse_mybatis_mappers, path.resolve(), all_file_data)
             if mybatis_batch:
                 await asyncio.to_thread(writer.write_mybatis_links, mybatis_batch)
         except Exception as _me:

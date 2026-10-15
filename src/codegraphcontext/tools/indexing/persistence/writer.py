@@ -2261,9 +2261,9 @@ class GraphWriter:
                     """
                     UNWIND $batch AS m
                     MATCH (c:Class {name: m.class_name, path: m.class_path})
-                    MERGE (tbl:DbTable {name: m.orm_table})
-                    ON CREATE SET tbl.fqn = m.orm_table, tbl.datasource_name = m.datastore
-                    ON MATCH SET tbl.datasource_name = COALESCE(tbl.datasource_name, m.datastore)
+                    MERGE (tbl:DbTable {fqn: m.orm_table})
+                    SET tbl.name = m.orm_table,
+                        tbl.datasource_name = COALESCE(tbl.datasource_name, m.datastore)
                     MERGE (c)-[:MAPS_TO {datastore: m.datastore, line_number: m.line_number}]->(tbl)
                     """,
                     batch=class_table[i : i + batch_size],
@@ -2299,9 +2299,9 @@ class GraphWriter:
                         f"""
                         UNWIND $batch AS q
                         MATCH (fn:Function {{name: q.method_name, path: q.method_path}})
-                        MERGE (tbl:DbTable {{name: q.table_name}})
-                        ON CREATE SET tbl.fqn = q.table_name, tbl.datasource_name = 'mysql'
-                        ON MATCH SET tbl.datasource_name = COALESCE(tbl.datasource_name, 'mysql')
+                        MERGE (tbl:DbTable {{fqn: q.table_name}})
+                        SET tbl.name = q.table_name,
+                            tbl.datasource_name = COALESCE(tbl.datasource_name, 'mysql')
                         MERGE (fn)-[:{op} {{line_number: q.line_number}}]->(tbl)
                         """,
                         batch=op_edges[i : i + batch_size],
@@ -2312,15 +2312,21 @@ class GraphWriter:
     def write_mybatis_links(self, mybatis_batch: List[Dict[str, Any]]) -> None:
         """Write READS / WRITES edges from Function → DbTable for MyBatis XML mappers."""
         edges = []
+        unresolved = 0
         for r in mybatis_batch:
+            if not r.get("method_path"):
+                unresolved += 1
+                continue
             for tbl in r.get("db_tables", []):
                 edges.append({
                     "method_name": r["method_name"],
-                    "class_name": r["class_name"],
+                    "method_path": r["method_path"],
                     "table_name": tbl,
                     "operation": r.get("operation", "READS"),
                 })
 
+        if unresolved:
+            warning_logger(f"[MYBATIS] Skipped {unresolved} operations without a unique indexed Java mapper source")
         if not edges:
             return
 
@@ -2336,11 +2342,10 @@ class GraphWriter:
                     session.run(
                         f"""
                         UNWIND $batch AS q
-                        MATCH (fn:Function {{name: q.method_name}})
-                        WHERE fn.class_context = q.class_name
-                        MERGE (tbl:DbTable {{name: q.table_name}})
-                        ON CREATE SET tbl.fqn = q.table_name, tbl.datasource_name = 'mysql'
-                        ON MATCH SET tbl.datasource_name = COALESCE(tbl.datasource_name, 'mysql')
+                        MATCH (fn:Function {{name: q.method_name, path: q.method_path}})
+                        MERGE (tbl:DbTable {{fqn: q.table_name}})
+                        SET tbl.name = q.table_name,
+                            tbl.datasource_name = COALESCE(tbl.datasource_name, 'mysql')
                         MERGE (fn)-[:{op}]->(tbl)
                         """,
                         batch=op_edges[i : i + batch_size],
@@ -2348,7 +2353,7 @@ class GraphWriter:
                     local_written += len(op_edges[i : i + batch_size])
             return local_written
         written = execute_write_operation(self.driver, backend, _work)
-        info_logger(f"[MYBATIS] Written {written} READS/WRITES MyBatis edges")
+        info_logger(f"[MYBATIS] Submitted {written} READS/WRITES MyBatis records")
 
     def write_spring_data_repo_links(self, orm_batch: List[Dict[str, Any]]) -> None:
         """Write READS/WRITES edges for Spring Data repository derived-query methods."""
