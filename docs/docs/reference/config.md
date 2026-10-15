@@ -30,6 +30,8 @@ cgc config set NEO4J_USERNAME neo4j
 
 Repository `.codegraphcontext/.env` and `.env` files are loaded **only in per-repo context mode** (or when `CGC_LOAD_PROJECT_ENV=1`). In **global** or **named** mode, `~/.codegraphcontext/.env` wins so cloned repos cannot override your credentials. Set `CGC_IGNORE_PROJECT_ENV=1` to force-skip project env.
 
+Project files are resolved in the **current working directory only**; parent directories are never searched. Run CGC from the project root, or put the shared setting in your global configuration. `CGC_LOAD_PROJECT_ENV=1` enables local loading without expanding this boundary.
+
 See [Project-Local Environment Files](#project-local-environment-files) below for the full precedence table.
 
 ---
@@ -179,7 +181,7 @@ Repository-level env files are **not** loaded in every mode:
 | :--- | :--- |
 | `~/.codegraphcontext/.env` | Always (global defaults) |
 | `<repo>/.codegraphcontext/.env` | **Per-repo mode only** (or when `CGC_LOAD_PROJECT_ENV=1`) |
-| `<repo>/.env` | **Per-repo mode only** (searched up to 5 parent directories) |
+| `<repo>/.env` | **Per-repo mode only** (current working directory only) |
 
 In **global** or **named** context mode, a checked-in `.codegraphcontext/.env` inside a clone does **not** override your user config—this prevents accidental hijacking when indexing third-party repos.
 

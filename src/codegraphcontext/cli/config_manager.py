@@ -443,32 +443,19 @@ def should_apply_project_dotenv() -> bool:
 
 
 def find_local_env() -> Optional[Path]:
-    """
-    Find a local .env file by searching current directory and parents.
-    Returns the first .env file found, or None.
+    """Find project configuration in the current directory only.
+
+    Prefer ``.codegraphcontext/.env`` to ``.env``. Parent directories are
+    deliberately excluded, just as they are for local context resolution:
+    starting CGC in one project must not import another project's settings.
     """
     if not should_apply_project_dotenv():
         return None
 
     current = Path.cwd()
-    
-    # Search up to 5 levels up
-    for _ in range(5):
-        # 1. Prefer .codegraphcontext/.env if it exists
-        cgc_env = current / ".codegraphcontext" / ".env"
-        if cgc_env.exists() and cgc_env != CONFIG_FILE:
-            return cgc_env
-            
-        # 2. Fall back to root project .env
-        env_file = current / ".env"
-        if env_file.exists() and env_file != CONFIG_FILE:
-            return env_file
-        
-        # Stop at root
-        if current.parent == current:
-            break
-        current = current.parent
-    
+    for candidate in (current / ".codegraphcontext" / ".env", current / ".env"):
+        if candidate.is_file() and candidate != CONFIG_FILE:
+            return candidate
     return None
 
 
