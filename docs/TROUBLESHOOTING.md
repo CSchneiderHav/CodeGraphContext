@@ -101,6 +101,12 @@ JSON document. Full recipe: `docs/CI_INTEGRATION.md`.
 
 ## Still stuck?
 
+Ladybug 0.19 can reuse a narrow integer binding for a later list-of-struct
+parameter. CGC prepares multi-row numeric bindings afresh so source line numbers
+and graph identities retain their original values. If an older index contains
+wrapped or negative line numbers, rebuild it with `cgc index --force` after
+upgrading; repairing containment edges alone cannot recover corrupted identities.
+
 Open an issue with: your `cgc --version`, the backend line from startup, the
 exact command, and the full output. The Discord invite in the README is the
 fastest route for questions that aren't bugs.
