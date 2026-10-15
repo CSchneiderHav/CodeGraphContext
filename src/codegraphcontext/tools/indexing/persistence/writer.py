@@ -67,10 +67,15 @@ def _last_row_per_key(rows: List[Dict[str, Any]], key) -> List[Dict[str, Any]]:
 
 
 def _run_node_then_rel(session, node_query: str, node_rows, rel_query: str, rel_rows, combined_query: str,
-                       combined_rows, **params) -> None:
+                       combined_rows, *, split: bool = True, **params) -> None:
     """Node phase, then relationship phase. `node_rows` may be a callable reading them from the session. On any error
     the chunk is rerun through the old combined query, i.e. the wrapper's per-row path with its old skip / retry / drop
     semantics; every MERGE here is idempotent."""
+    if not split:
+        # Ladybug 0.19 can silently lose Parameter links on the split path.
+        # Keep its established per-row query until exact parity is reliable.
+        session.run(combined_query, batch=combined_rows, **params)
+        return
     try:
         session.run(node_query, batch=node_rows(session) if callable(node_rows) else node_rows, **params)
         session.run(rel_query, batch=rel_rows, **params)
@@ -703,6 +708,7 @@ class GraphWriter:
                     MERGE (fn)-[:HAS_PARAMETER]->(p)
                 """,
                     unique_params,
+                    split=backend != "ladybugdb",
                     file_path=file_path_str,
                 )
 
@@ -856,6 +862,7 @@ class GraphWriter:
                         r.lang = row.lang
                 """,
                     other_imports,
+                    split=backend != "ladybugdb",
                     file_path=file_path_str,
                 )
 
@@ -1343,7 +1350,10 @@ class GraphWriter:
                     try:
                         # every referenced field present: a key missing from all rows would not bind in a batch
                         rows_n = [{k: r.get(k) for k in ("child_name", "path", "parent_name", "confidence_label")} for r in chunk]
-                        _run_node_then_rel(session, parents, rows_n, links, rows_n, query, chunk)
+                        _run_node_then_rel(
+                            session, parents, rows_n, links, rows_n, query, chunk,
+                            split=backend != "ladybugdb",
+                        )
                     except Exception as e:
                         if _is_binder_exception(e):
                             return
